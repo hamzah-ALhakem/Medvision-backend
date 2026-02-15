@@ -1,0 +1,159 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 1. المستخدمين (يشمل الأطباء والمرضى والأدمن)
+model User {
+  id            Int      @id @default(autoincrement())
+  email         String   @unique
+  password      String
+  role          Role     @default(PATIENT)
+  
+  // 🟢 الحقل الجديد: حالة الحساب
+  accountStatus AccountStatus @default(ACTIVE) @map("account_status")
+
+  // ... (باقي الحقول كما هي: firstName, lastName, etc...)
+  firstName     String   @map("first_name")
+  lastName      String   @map("last_name")
+  phone         String?
+  gender        String?
+  city          String?
+  specialty     String?
+  clinicAddress String?  @map("clinic_address")
+  licenseNumber String?  @map("license_number")
+  bio           String?
+
+  // ... (العلاقات كما هي)
+  doctorSchedules Schedule[]
+  appointmentsAsDoctor  Appointment[] @relation("DoctorAppointments")
+  appointmentsAsPatient Appointment[] @relation("PatientAppointments")
+  sentMessages      Message[] @relation("SentMessages")
+  receivedMessages Message[] @relation("ReceivedMessages")
+  notifications    Notification[]
+
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+// 2. جدول مواعيد عمل الأطباء (Availability)
+model Schedule {
+  id        Int      @id @default(autoincrement())
+  dayOfWeek String   @map("day_of_week") // Sunday, Monday...
+  startTime String   @map("start_time")  // "09:00"
+  endTime   String   @map("end_time")    // "17:00"
+  isActive  Boolean  @default(true)      @map("is_active")
+  
+  doctorId  Int      @map("doctor_id")
+  doctor    User     @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@map("schedules")
+}
+
+// 3. الحجوزات
+model Appointment {
+  id              Int      @id @default(autoincrement())
+  date            DateTime @db.Date // 2025-05-20
+  time            String   // "10:30:00"
+  reason          String?
+  status          Status   @default(PENDING) // PENDING, CONFIRMED, CANCELLED, COMPLETED
+  
+  patientId       Int      @map("patient_id")
+  patient         User     @relation("PatientAppointments", fields: [patientId], references: [id])
+  
+  doctorId        Int      @map("doctor_id")
+  doctor          User     @relation("DoctorAppointments", fields: [doctorId], references: [id])
+
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@map("appointments")
+}
+
+// 4. الرسائل (Chat)
+model Message {
+  id         Int      @id @default(autoincrement())
+  content    String
+  isRead     Boolean  @default(false) @map("is_read")
+  
+  senderId   Int      @map("sender_id")
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id])
+  
+  receiverId Int      @map("receiver_id")
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("messages")
+}
+
+// 5. الإشعارات
+model Notification {
+  id        Int      @id @default(autoincrement())
+  message   String
+  type      String   // 'message', 'appointment', 'system'
+  
+  // 🟢 التعديل الجديد: عمود مخصص للرقم المرتبط
+  relatedId Int?     @map("related_id") 
+
+  isRead    Boolean  @default(false) @map("is_read")
+  
+  userId    Int      @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("notifications")
+}
+
+// 6. المعامل الطبية
+model Lab {
+  id        Int      @id @default(autoincrement())
+  name      String
+  address   String
+  phone     String?
+  rating    Float    @default(0.0)
+  image     String?
+  
+  services  LabService[]
+
+  @@map("labs")
+}
+
+model LabService {
+  id      Int    @id @default(autoincrement())
+  name    String
+  price   Float
+  
+  labId   Int    @map("lab_id")
+  lab     Lab    @relation(fields: [labId], references: [id], onDelete: Cascade)
+
+  @@map("lab_services")
+}
+
+// Enums
+enum Role {
+  PATIENT
+  DOCTOR
+  ADMIN
+}
+
+enum Status {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+enum AccountStatus {
+  PENDING
+  ACTIVE
+  REJECTED
+}
