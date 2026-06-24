@@ -1,17 +1,17 @@
 import express from 'express';
 import { createAppointment, getMyAppointments, updateAppointmentStatus } from '../controllers/appointment.controller.js';
-import { authenticateToken } from '../middleware/auth.middleware.js';
+import { authenticateToken, authorizeRole } from '../middleware/auth.middleware.js';
+import { createAppointmentValidation, updateStatusValidation, validate } from '../middleware/validators.js';
 
 const router = express.Router();
 
-// 1. Create a new booking (POST /api/appointments)
-router.post('/', authenticateToken, createAppointment);
+// Create a new booking (patients only)
+router.post('/', authenticateToken, createAppointmentValidation, validate, createAppointment);
 
-// 2. Get list of appointments (GET /api/appointments)
+// Get list of appointments (any authenticated user)
 router.get('/', authenticateToken, getMyAppointments);
 
-// 3. Doctor accepts/rejects appointment (PUT /api/appointments/:id/status)
-router.put('/:id/status', authenticateToken, updateAppointmentStatus);
+// Doctor accepts/rejects appointment (doctors only)
+router.put('/:id/status', authenticateToken, authorizeRole('DOCTOR'), updateStatusValidation, validate, updateAppointmentStatus);
 
 export default router;
-

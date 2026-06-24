@@ -1,8 +1,8 @@
 import jwt from 'jsonwebtoken';
 
+// Authenticate JWT Token
 export const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
-    // التوكن يأتي عادة بصيغة: "Bearer eyJhbGci..."
     const token = authHeader && authHeader.split(' ')[1];
 
     if (!token) {
@@ -13,7 +13,19 @@ export const authenticateToken = (req, res, next) => {
         if (err) {
             return res.status(403).json({ message: 'Invalid or Expired Token' });
         }
-        req.user = user; // إرفاق بيانات المستخدم بالطلب
+        req.user = user;
         next();
     });
+};
+
+// Role-Based Access Control (RBAC)
+export const authorizeRole = (...allowedRoles) => {
+    return (req, res, next) => {
+        if (!req.user || !allowedRoles.includes(req.user.role)) {
+            return res.status(403).json({ 
+                message: 'Forbidden: You do not have permission to perform this action' 
+            });
+        }
+        next();
+    };
 };

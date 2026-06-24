@@ -1,11 +1,11 @@
 import prisma from '../config/prisma.js';
 import bcrypt from 'bcryptjs';
 
-// 1. Get Doctors
+// 1. Get Doctors (only ACTIVE doctors)
 export const getDoctors = async (req, res) => {
     try {
         const doctors = await prisma.user.findMany({
-            where: { role: 'DOCTOR' },
+            where: { role: 'DOCTOR', accountStatus: 'ACTIVE' },
             select: {
                 id: true, firstName: true, lastName: true, specialty: true,
                 clinicAddress: true, gender: true, phone: true,
@@ -42,14 +42,14 @@ export const getProfile = async (req, res) => {
                 specialty: true, licenseNumber: true
             }
         });
-        if (!user) return res.status(404).json({ message: "User not found" });
+        if (!user) return res.status(404).json({ message: 'User not found' });
         res.json(user);
     } catch (error) {
         res.status(500).json({ message: 'Server Error' });
     }
 };
 
-// 3. Update Profile (General Info)
+// 3. Update Profile (General Info) — SECURITY: exclude password from response
 export const updateProfile = async (req, res) => {
     try {
         const { firstName, lastName, phone, address, specialty } = req.body;
@@ -60,33 +60,34 @@ export const updateProfile = async (req, res) => {
                 firstName: firstName,
                 lastName: lastName,
                 phone: phone,
-                clinicAddress: address, // Map frontend 'address' to DB 'clinicAddress'
+                clinicAddress: address,
                 specialty: specialty
+            },
+            select: {
+                id: true, firstName: true, lastName: true, email: true,
+                phone: true, role: true, clinicAddress: true, specialty: true
             }
         });
 
         res.json({ message: 'تم تحديث البيانات بنجاح', user: updatedUser });
     } catch (error) {
-        console.error("Update Error:", error);
+        console.error('Update Error:', error);
         res.status(500).json({ message: 'فشل تحديث البيانات' });
     }
 };
 
-// 4. Change Password (Security)
+// 4. Change Password
 export const changePassword = async (req, res) => {
     try {
         const { currentPassword, newPassword } = req.body;
         
-        // جلب المستخدم مع الباسورد الحالي
         const user = await prisma.user.findUnique({ where: { id: req.user.id } });
 
-        // التحقق من الباسورد القديم
         const isMatch = await bcrypt.compare(currentPassword, user.password);
         if (!isMatch) {
             return res.status(400).json({ message: 'كلمة المرور الحالية غير صحيحة' });
         }
 
-        // تشفير الجديد وحفظه
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(newPassword, salt);
 
@@ -98,7 +99,7 @@ export const changePassword = async (req, res) => {
         res.json({ message: 'تم تغيير كلمة المرور بنجاح' });
 
     } catch (error) {
-        console.error("Password Error:", error);
+        console.error('Password Error:', error);
         res.status(500).json({ message: 'فشل تغيير كلمة المرور' });
     }
 };

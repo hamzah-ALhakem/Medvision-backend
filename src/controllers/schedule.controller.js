@@ -1,57 +1,38 @@
 import prisma from '../config/prisma.js';
+import logger from '../utils/logger.js';
 
 // 1. Save or Update Schedule
 export const updateSchedule = async (req, res) => {
     try {
-        // تأمين تحويل المعرف لرقم
-        const doctorId = parseInt(req.user.id); 
-        const { schedule } = req.body; 
+        const doctorId = parseInt(req.user.id);
+        const { schedule } = req.body;
 
         if (isNaN(doctorId)) {
             return res.status(400).json({ message: 'Invalid User ID' });
         }
 
-        if (!schedule || !Array.isArray(schedule)) {
-            return res.status(400).json({ message: 'بيانات الجدول غير صحيحة' });
-        }
-
-        console.log(`Updating schedule for Doctor ID: ${doctorId}, Days: ${schedule.length}`);
-
-        // استخدام Transaction لضمان سلامة البيانات
         await prisma.$transaction(async (tx) => {
-            // 1. حذف الجدول القديم بالكامل لهذا الطبيب
-            await tx.schedule.deleteMany({
-                where: { doctorId: doctorId }
-            });
+            await tx.schedule.deleteMany({ where: { doctorId } });
 
-            // 2. تجهيز البيانات الجديدة
             const dataToInsert = schedule.map(item => ({
-                doctorId: doctorId,
+                doctorId,
                 dayOfWeek: item.day,
-                // ضمان عدم إرسال وقت فارغ، نضع قيمة افتراضية إذا كان فارغاً
                 startTime: item.startTime || '09:00',
                 endTime: item.endTime || '17:00',
                 isActive: item.isActive
             }));
 
-            // 3. إدخال البيانات الجديدة
             if (dataToInsert.length > 0) {
-                await tx.schedule.createMany({
-                    data: dataToInsert
-                });
+                await tx.schedule.createMany({ data: dataToInsert });
             }
         });
 
-        console.log("Schedule updated successfully");
-        res.json({ message: 'تم تحديث جدول المواعيد بنجاح' });
+        logger.info(`Schedule updated for Doctor ${doctorId}`);
+        res.json({ message: '\u062a\u0645 \u062a\u062d\u062f\u064a\u062b \u062c\u062f\u0648\u0644 \u0627\u0644\u0645\u0648\u0627\u0639\u064a\u062f \u0628\u0646\u062c\u0627\u062d' });
 
     } catch (error) {
-        // طباعة الخطأ الكامل في التيرمينال لمعرفة السبب
-        console.error("❌ Update Schedule Error:", error);
-        res.status(500).json({ 
-            message: 'فشل تحديث الجدول', 
-            error: error.message 
-        });
+        logger.error('Update Schedule Error:', error);
+        res.status(500).json({ message: '\u0641\u0634\u0644 \u062a\u062d\u062f\u064a\u062b \u0627\u0644\u062c\u062f\u0648\u0644' });
     }
 };
 
@@ -59,11 +40,8 @@ export const updateSchedule = async (req, res) => {
 export const getMySchedule = async (req, res) => {
     try {
         const doctorId = parseInt(req.user.id);
-        const schedules = await prisma.schedule.findMany({
-            where: { doctorId: doctorId }
-        });
+        const schedules = await prisma.schedule.findMany({ where: { doctorId } });
 
-        // تنسيق البيانات للفرونت إند
         const formatted = schedules.map(s => ({
             day: s.dayOfWeek,
             startTime: s.startTime,
@@ -73,7 +51,7 @@ export const getMySchedule = async (req, res) => {
 
         res.json(formatted);
     } catch (error) {
-        console.error(error);
+        logger.error(error);
         res.status(500).json({ message: 'Server Error' });
     }
 };
@@ -83,22 +61,19 @@ export const getDoctorSchedule = async (req, res) => {
     try {
         const { doctorId } = req.params;
         const schedules = await prisma.schedule.findMany({
-            where: { 
-                doctorId: parseInt(doctorId),
-                isActive: true 
-            }
+            where: { doctorId: parseInt(doctorId), isActive: true }
         });
 
         const formatted = schedules.map(s => ({
-            day_of_week: s.dayOfWeek, // لاحظ: الفرونت إند قد يتوقع هذا الاسم
-            day: s.dayOfWeek,         // نضيف هذا أيضاً للاحتياط
+            day_of_week: s.dayOfWeek,
+            day: s.dayOfWeek,
             start_time: s.startTime,
             end_time: s.endTime
         }));
 
         res.json(formatted);
     } catch (error) {
-        console.error(error);
+        logger.error(error);
         res.status(500).json({ message: 'Server Error' });
     }
 };

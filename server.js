@@ -1,8 +1,11 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import http from 'http'; // 1. استيراد http
-import { Server } from 'socket.io'; // 2. استيراد Socket.io
+import http from 'http';
+import { Server } from 'socket.io';
+import jwt from 'jsonwebtoken';
+import helmet from 'helmet';
+import logger from './src/utils/logger.js';
 
 // Import Routes
 import authRoutes from './src/routes/auth.routes.js';
@@ -17,48 +20,56 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
-// 3. إعداد السيرفر و Socket.io
+// HTTP Server + Socket.io
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: "*", // للسماح للفرونت إند بالاتصال من أي مكان
-        methods: ["GET", "POST", "PUT", "DELETE"]
+        origin: FRONTEND_URL,
+        methods: ['GET', 'POST', 'PUT', 'DELETE'],
+        credentials: true
     }
 });
 
-// Middleware
-app.use(cors());
-app.use(express.json());
+// Security & Parsing Middleware
+app.use(helmet());
+app.use(cors({
+    origin: FRONTEND_URL,
+    credentials: true
+}));
+app.use(express.json({ limit: '1mb' }));
 
-// 4. جعل io متاحاً في كل الـ Controllers (Global IO)
+// Make io accessible in controllers
 app.use((req, res, next) => {
     req.io = io;
     next();
 });
 
-// 5. إعدادات الاتصال (Socket Logic)
-io.on("connection", (socket) => {
-    console.log(`⚡ Client Connected: ${socket.id}`);
+// --- WebSocket Authentication ---
+io.use((socket, next) => {
+    const token = socket.handshake.auth?.token;
+    if (!token) {
+        return next(new Error('Authentication required'));
+    }
 
-    // عندما يدخل المستخدم، ينضم لغرفة خاصة به برقم الـ ID
-    // هذا يسمح لنا بإرسال إشعارات لشخص محدد فقط
-    socket.on("join_user", (userId) => {
-        if (userId) {
-            socket.join(`user_${userId}`);
-            console.log(`👤 User joined room: user_${userId}`);
-        }
-    });
-
-    socket.on("disconnect", () => {
-        console.log("Client Disconnected");
-    });
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        socket.userId = decoded.id;
+        socket.userRole = decoded.role;
+        next();
+    } catch (err) {
+        next(new Error('Invalid or expired token'));
+    }
 });
 
-// Logging Middleware
-app.use((req, res, next) => {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-    next();
+io.on('connection', (socket) => {
+    socket.join(`user_${socket.userId}`);
+    logger.info(`User ${socket.userId} connected (socket: ${socket.id})`);
+
+    socket.on('disconnect', () => {
+        logger.info(`User ${socket.userId} disconnected`);
+    });
 });
 
 // --- ROUTES ---
@@ -71,22 +82,19 @@ app.use('/api/appointments', appointmentRoutes);
 app.use('/api/admin', adminRoutes);
 
 app.get('/', (req, res) => {
-    res.send('MedVision API is Running with Socket.io 🚀');
+    res.send('MedVision API is Running');
 });
 
 // Error Handling
 app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(500).json({ message: 'Something went wrong!', error: err.message });
+    logger.error(err.stack);
+    res.status(500).json({ message: 'Something went wrong!' });
 });
 
-// ---------------------------------------------------------
-// التشغيل (نستخدم server بدلاً من app)
-// ---------------------------------------------------------
-
+// Start server
 if (process.env.NODE_ENV !== 'production') {
-    server.listen(PORT, () => { // استخدمنا server هنا
-        console.log(`🚀 Server running with Socket.io on http://localhost:${PORT}`);
+    server.listen(PORT, () => {
+        logger.info(`Server running on http://localhost:${PORT}`);
     });
 }
 

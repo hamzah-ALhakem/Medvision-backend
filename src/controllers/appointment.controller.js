@@ -1,172 +1,100 @@
+import * as appointmentService from '../services/appointment.service.js';
+import * as notificationService from '../services/notification.service.js';
 import prisma from '../config/prisma.js';
 
-// 1. Book a new appointment
+// 1. Book a new appointment (with double-booking prevention)
 export const createAppointment = async (req, res) => {
     try {
         const { doctorId, date, time, reason } = req.body;
         const patientId = req.user.id;
 
-        // 1. Create Appointment
-        const newAppointment = await prisma.appointment.create({
-            data: {
-                patientId: patientId,
-                doctorId: doctorId,
-                date: new Date(date),
-                time: time,
-                reason: reason,
-                status: 'PENDING'
-            },
-            include: {
-                patient: { select: { firstName: true, lastName: true } }
-            }
+        const newAppointment = await appointmentService.createAppointment({
+            patientId, doctorId, date, time, reason
         });
 
-        // 2. Create Notification for Doctor
-        // 🔥 سنضع patientId في relatedId لكي نستطيع العثور على الإشعار لاحقاً وحذفه
         const patientName = `${newAppointment.patient.firstName} ${newAppointment.patient.lastName}`;
 
-        const notification = await prisma.notification.create({
-            data: {
-                userId: doctorId,
-                type: 'appointment',
-                relatedId: newAppointment.id, // 🔥 ربطنا الإشعار برقم الموعد
-                message: `طلب حجز جديد من: ${patientName} يوم ${date} الساعة ${time}`,
-                isRead: false
-            }
+        const notification = await notificationService.createNotification({
+            userId: doctorId,
+            type: 'appointment',
+            relatedId: newAppointment.id,
+            message: `\u0637\u0644\u0628 \u062d\u062c\u0632 \u062c\u062f\u064a\u062f \u0645\u0646: ${patientName} \u064a\u0648\u0645 ${date} \u0627\u0644\u0633\u0627\u0639\u0629 ${time}`
         });
 
-        // Real-time Trigger
-        req.io.to(`user_${doctorId}`).emit("receive_notification", notification);
-        req.io.to(`user_${doctorId}`).emit("appointment_updated", newAppointment);
+        req.io.to(`user_${doctorId}`).emit('receive_notification', notification);
+        req.io.to(`user_${doctorId}`).emit('appointment_updated', newAppointment);
 
         res.status(201).json(newAppointment);
 
     } catch (error) {
-        console.error("Create Appointment Error:", error);
-        res.status(500).json({ message: 'فشل حجز الموعد' });
+        const statusCode = error.statusCode || 500;
+        res.status(statusCode).json({ message: error.message || 'Failed to book appointment' });
     }
 };
 
-// 2. Get appointments (كما هو)
+// 2. Get appointments (with optional pagination)
 export const getMyAppointments = async (req, res) => {
     try {
         const userId = req.user.id;
         const role = req.user.role;
+        const page = req.query.page ? parseInt(req.query.page) : null;
+        const limit = req.query.limit ? parseInt(req.query.limit) : null;
 
-        const whereCondition = role === 'PATIENT'
-            ? { patientId: userId }
-            : { doctorId: userId };
-
-        const appointments = await prisma.appointment.findMany({
-            where: whereCondition,
-            include: {
-                doctor: role === 'PATIENT' ? {
-                    select: { id: true, firstName: true, lastName: true, specialty: true, clinicAddress: true, phone: true }
-                } : false,
-                patient: role === 'DOCTOR' ? {
-                    select: { id: true, firstName: true, lastName: true, phone: true, gender: true }
-                } : false
-            },
-            orderBy: { date: 'desc' }
-        });
-
-        const formatted = appointments.map(appt => {
-            const otherParty = role === 'PATIENT' ? appt.doctor : appt.patient;
-            return {
-                id: appt.id,
-                appointment_date: appt.date,
-                appointment_time: appt.time,
-                status: appt.status.toLowerCase(),
-                reason: appt.reason,
-                doctor_id: appt.doctorId,
-                patient_id: appt.patientId,
-                first_name: otherParty.firstName,
-                last_name: otherParty.lastName,
-                specialty: otherParty.specialty,
-                clinic_address: otherParty.clinicAddress,
-                phone: otherParty.phone,
-                gender: otherParty.gender
-            };
-        });
-
-        res.json(formatted);
+        const result = await appointmentService.getAppointments({ userId, role, page, limit });
+        res.json(result);
 
     } catch (error) {
-        console.error("Get Appointments Error:", error);
         res.status(500).json({ message: 'Server Error' });
     }
 };
 
-// 3. Update Status (الحل السحري هنا) 🌟
+// 3. Update Status (ownership verified in service)
 export const updateAppointmentStatus = async (req, res) => {
     try {
         const { id } = req.params;
-        const { status } = req.body; // 'confirmed' or 'cancelled'
+        const { status } = req.body;
         const doctorId = req.user.id;
 
-        const prismaStatus = status.toUpperCase();
-
-        // 1. تحديث الموعد
-        const updatedAppt = await prisma.appointment.update({
-            where: { id: parseInt(id) },
-            data: { status: prismaStatus },
-            include: {
-                doctor: { select: { firstName: true, lastName: true } },
-                patient: { select: { firstName: true, lastName: true } }
-            }
+        const updatedAppt = await appointmentService.updateStatus({
+            appointmentId: parseInt(id), doctorId, status
         });
 
-        // 2. 🔥 تنظيف الإشعار القديم عند الطبيب
-        // نبحث عن الإشعار المرتبط بهذا الموعد ونجعله مقروءاً
-        await prisma.notification.updateMany({
-            where: {
-                userId: doctorId,
-                type: 'appointment',
-                relatedId: parseInt(id), // نستخدم رقم الموعد الذي حفظناه سابقاً
-                isRead: false
-            },
-            data: { isRead: true }
-        });
-        req.io.to(`user_${doctorId}`).emit("refresh_notifications");
+        // Clean up old doctor notification
+        await notificationService.markAppointmentNotificationsRead(doctorId, parseInt(id));
+        req.io.to(`user_${doctorId}`).emit('refresh_notifications');
 
-        // 3. إشعار المريض
+        // Notify patient
         let msg = '';
-        if (status === 'confirmed') msg = `✅ تم تأكيد موعدك مع د. ${updatedAppt.doctor.firstName} ${updatedAppt.doctor.lastName}`;
-        if (status === 'cancelled') msg = `❌ تم إلغاء موعدك مع د. ${updatedAppt.doctor.firstName} ${updatedAppt.doctor.lastName}`;
+        if (status === 'confirmed') msg = `\u2705 \u062a\u0645 \u062a\u0623\u0643\u064a\u062f \u0645\u0648\u0639\u062f\u0643 \u0645\u0639 \u062f. ${updatedAppt.doctor.firstName} ${updatedAppt.doctor.lastName}`;
+        if (status === 'cancelled') msg = `\u274c \u062a\u0645 \u0625\u0644\u063a\u0627\u0621 \u0645\u0648\u0639\u062f\u0643 \u0645\u0639 \u062f. ${updatedAppt.doctor.firstName} ${updatedAppt.doctor.lastName}`;
 
-        const notification = await prisma.notification.create({
-            data: {
-                userId: updatedAppt.patientId,
-                type: 'appointment',
-                message: msg,
-                isRead: false
-            }
+        const notification = await notificationService.createNotification({
+            userId: updatedAppt.patientId,
+            type: 'appointment',
+            message: msg
         });
 
-        // 4. 🔥 فتح الشات تلقائياً (الحل لمشكلة التراسل)
-        // إذا تم التأكيد، ننشئ رسالة نظام ترحيبية لكي يظهر كل منهما في قائمة الآخر
+        // Auto-open chat on confirmation
         if (status === 'confirmed') {
             const welcomeMsg = await prisma.message.create({
                 data: {
                     senderId: doctorId,
                     receiverId: updatedAppt.patientId,
-                    content: "تم تأكيد الحجز. يمكنكم الآن بدء المحادثة الطبية.",
+                    content: '\u062a\u0645 \u062a\u0623\u0643\u064a\u062f \u0627\u0644\u062d\u062c\u0632. \u064a\u0645\u0643\u0646\u0643\u0645 \u0627\u0644\u0622\u0646 \u0628\u062f\u0621 \u0627\u0644\u0645\u062d\u0627\u062f\u062b\u0629 \u0627\u0644\u0637\u0628\u064a\u0629.',
                     isRead: false
                 }
             });
-            // إرسال الرسالة عبر السوكيت للطرفين
-            req.io.to(`user_${updatedAppt.patientId}`).emit("receive_message", welcomeMsg);
-            req.io.to(`user_${doctorId}`).emit("receive_message", welcomeMsg);
+            req.io.to(`user_${updatedAppt.patientId}`).emit('receive_message', welcomeMsg);
+            req.io.to(`user_${doctorId}`).emit('receive_message', welcomeMsg);
         }
 
-        // إرسال الإشعارات عبر السوكيت
-        req.io.to(`user_${updatedAppt.patientId}`).emit("receive_notification", notification);
-        req.io.to(`user_${updatedAppt.patientId}`).emit("appointment_updated", updatedAppt);
+        req.io.to(`user_${updatedAppt.patientId}`).emit('receive_notification', notification);
+        req.io.to(`user_${updatedAppt.patientId}`).emit('appointment_updated', updatedAppt);
 
-        res.json({ ...updatedAppt, status: status });
+        res.json({ ...updatedAppt, status });
 
     } catch (error) {
-        console.error("Update Status Error:", error);
-        res.status(500).json({ message: 'فشل تحديث الحالة' });
+        const statusCode = error.statusCode || 500;
+        res.status(statusCode).json({ message: error.message || 'Failed to update status' });
     }
 };

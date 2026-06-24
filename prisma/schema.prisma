@@ -9,17 +9,15 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// 1. المستخدمين (يشمل الأطباء والمرضى والأدمن)
+// 1. Users (Doctors, Patients, Admin)
 model User {
   id            Int      @id @default(autoincrement())
   email         String   @unique
   password      String
   role          Role     @default(PATIENT)
   
-  // 🟢 الحقل الجديد: حالة الحساب
   accountStatus AccountStatus @default(ACTIVE) @map("account_status")
 
-  // ... (باقي الحقول كما هي: firstName, lastName, etc...)
   firstName     String   @map("first_name")
   lastName      String   @map("last_name")
   phone         String?
@@ -30,13 +28,12 @@ model User {
   licenseNumber String?  @map("license_number")
   bio           String?
 
-  // ... (العلاقات كما هي)
-  doctorSchedules Schedule[]
+  doctorSchedules       Schedule[]
   appointmentsAsDoctor  Appointment[] @relation("DoctorAppointments")
   appointmentsAsPatient Appointment[] @relation("PatientAppointments")
-  sentMessages      Message[] @relation("SentMessages")
-  receivedMessages Message[] @relation("ReceivedMessages")
-  notifications    Notification[]
+  sentMessages          Message[]     @relation("SentMessages")
+  receivedMessages      Message[]     @relation("ReceivedMessages")
+  notifications         Notification[]
 
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
@@ -44,40 +41,46 @@ model User {
   @@map("users")
 }
 
-// 2. جدول مواعيد عمل الأطباء (Availability)
+// 2. Doctor Availability Schedules
 model Schedule {
   id        Int      @id @default(autoincrement())
-  dayOfWeek String   @map("day_of_week") // Sunday, Monday...
-  startTime String   @map("start_time")  // "09:00"
-  endTime   String   @map("end_time")    // "17:00"
-  isActive  Boolean  @default(true)      @map("is_active")
+  dayOfWeek String   @map("day_of_week")
+  startTime String   @map("start_time")
+  endTime   String   @map("end_time")
+  isActive  Boolean  @default(true) @map("is_active")
   
   doctorId  Int      @map("doctor_id")
   doctor    User     @relation(fields: [doctorId], references: [id], onDelete: Cascade)
 
+  @@unique([doctorId, dayOfWeek], name: "unique_doctor_day")
+  @@index([doctorId])
   @@map("schedules")
 }
 
-// 3. الحجوزات
+// 3. Appointments
 model Appointment {
   id              Int      @id @default(autoincrement())
-  date            DateTime @db.Date // 2025-05-20
-  time            String   // "10:30:00"
+  date            DateTime @db.Date
+  time            String
   reason          String?
-  status          Status   @default(PENDING) // PENDING, CONFIRMED, CANCELLED, COMPLETED
+  status          Status   @default(PENDING)
   
   patientId       Int      @map("patient_id")
-  patient         User     @relation("PatientAppointments", fields: [patientId], references: [id])
+  patient         User     @relation("PatientAppointments", fields: [patientId], references: [id], onDelete: Cascade)
   
   doctorId        Int      @map("doctor_id")
-  doctor          User     @relation("DoctorAppointments", fields: [doctorId], references: [id])
+  doctor          User     @relation("DoctorAppointments", fields: [doctorId], references: [id], onDelete: Cascade)
 
   createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
+  @@index([patientId])
+  @@index([doctorId])
+  @@index([status, date])
   @@map("appointments")
 }
 
-// 4. الرسائل (Chat)
+// 4. Messages (Chat)
 model Message {
   id         Int      @id @default(autoincrement())
   content    String
@@ -90,19 +93,19 @@ model Message {
   receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
 
   createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
 
+  @@index([senderId, receiverId])
+  @@index([receiverId, senderId])
   @@map("messages")
 }
 
-// 5. الإشعارات
+// 5. Notifications
 model Notification {
   id        Int      @id @default(autoincrement())
   message   String
-  type      String   // 'message', 'appointment', 'system'
-  
-  // 🟢 التعديل الجديد: عمود مخصص للرقم المرتبط
-  relatedId Int?     @map("related_id") 
-
+  type      String
+  relatedId Int?     @map("related_id")
   isRead    Boolean  @default(false) @map("is_read")
   
   userId    Int      @map("user_id")
@@ -110,10 +113,11 @@ model Notification {
 
   createdAt DateTime @default(now()) @map("created_at")
 
+  @@index([userId, isRead])
   @@map("notifications")
 }
 
-// 6. المعامل الطبية
+// 6. Medical Labs
 model Lab {
   id        Int      @id @default(autoincrement())
   name      String
