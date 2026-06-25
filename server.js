@@ -18,12 +18,15 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+const allowedOrigins = ['http://localhost:5173'];
+if (process.env.FRONTEND_URL) {
+    allowedOrigins.push(process.env.FRONTEND_URL);
+}
 
 // Security & Parsing Middleware
 app.use(helmet());
 app.use(cors({
-    origin: FRONTEND_URL,
+    origin: allowedOrigins,
     credentials: true
 }));
 app.use(express.json({ limit: '1mb' }));
