@@ -1,6 +1,7 @@
 import * as appointmentService from '../services/appointment.service.js';
 import * as notificationService from '../services/notification.service.js';
 import prisma from '../config/prisma.js';
+import pusher from '../config/pusher.js';
 
 // 1. Book a new appointment (with double-booking prevention)
 export const createAppointment = async (req, res) => {
@@ -21,8 +22,8 @@ export const createAppointment = async (req, res) => {
             message: `\u0637\u0644\u0628 \u062d\u062c\u0632 \u062c\u062f\u064a\u062f \u0645\u0646: ${patientName} \u064a\u0648\u0645 ${date} \u0627\u0644\u0633\u0627\u0639\u0629 ${time}`
         });
 
-        req.io.to(`user_${doctorId}`).emit('receive_notification', notification);
-        req.io.to(`user_${doctorId}`).emit('appointment_updated', newAppointment);
+        pusher.trigger(`user_${doctorId}`, 'receive_notification', notification);
+        pusher.trigger(`user_${doctorId}`, 'appointment_updated', newAppointment);
 
         res.status(201).json(newAppointment);
 
@@ -61,7 +62,7 @@ export const updateAppointmentStatus = async (req, res) => {
 
         // Clean up old doctor notification
         await notificationService.markAppointmentNotificationsRead(doctorId, parseInt(id));
-        req.io.to(`user_${doctorId}`).emit('refresh_notifications');
+        pusher.trigger(`user_${doctorId}`, 'refresh_notifications', {});
 
         // Notify patient
         let msg = '';
@@ -84,12 +85,12 @@ export const updateAppointmentStatus = async (req, res) => {
                     isRead: false
                 }
             });
-            req.io.to(`user_${updatedAppt.patientId}`).emit('receive_message', welcomeMsg);
-            req.io.to(`user_${doctorId}`).emit('receive_message', welcomeMsg);
+            pusher.trigger(`user_${updatedAppt.patientId}`, 'receive_message', welcomeMsg);
+            pusher.trigger(`user_${doctorId}`, 'receive_message', welcomeMsg);
         }
 
-        req.io.to(`user_${updatedAppt.patientId}`).emit('receive_notification', notification);
-        req.io.to(`user_${updatedAppt.patientId}`).emit('appointment_updated', updatedAppt);
+        pusher.trigger(`user_${updatedAppt.patientId}`, 'receive_notification', notification);
+        pusher.trigger(`user_${updatedAppt.patientId}`, 'appointment_updated', updatedAppt);
 
         res.json({ ...updatedAppt, status });
 

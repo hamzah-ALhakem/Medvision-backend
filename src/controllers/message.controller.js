@@ -1,5 +1,6 @@
 import * as messageService from '../services/message.service.js';
 import * as notificationService from '../services/notification.service.js';
+import pusher from '../config/pusher.js';
 
 // 1. Send Message
 export const sendMessage = async (req, res) => {
@@ -30,10 +31,8 @@ export const sendMessage = async (req, res) => {
                 message: `\u0631\u0633\u0627\u0644\u0629 \u062c\u062f\u064a\u062f\u0629 \u0645\u0646 ${senderName}: ${content.substring(0, 30)}...`
             });
 
-            if (req.io) {
-                req.io.to(`user_${receiverId}`).emit('receive_message', newMessage);
-                req.io.to(`user_${receiverId}`).emit('receive_notification', notification);
-            }
+            pusher.trigger(`user_${receiverId}`, 'receive_message', newMessage);
+            pusher.trigger(`user_${receiverId}`, 'receive_notification', notification);
         } catch (notifError) {
             console.error('Notification creation failed:', notifError);
         }
