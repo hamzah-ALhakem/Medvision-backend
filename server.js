@@ -15,6 +15,7 @@ import messageRoutes from './src/routes/message.routes.js';
 import notificationRoutes from './src/routes/notification.routes.js';
 import appointmentRoutes from './src/routes/appointment.routes.js';
 import adminRoutes from './src/routes/admin.routes.js';
+import labRoutes from './src/routes/labRoutes.js';
 
 dotenv.config();
 
@@ -80,6 +81,7 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/labs', labRoutes);
 
 app.get('/', (req, res) => {
     res.send('MedVision API is Running');
@@ -92,10 +94,8 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
-if (process.env.NODE_ENV !== 'production') {
-    server.listen(PORT, () => {
-        logger.info(`Server running on http://localhost:${PORT}`);
-    });
-}
+server.listen(PORT, () => {
+    logger.info(`Server running on http://localhost:${PORT}`);
+});
 
 export default app;
