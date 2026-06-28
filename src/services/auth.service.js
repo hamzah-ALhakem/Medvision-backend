@@ -10,7 +10,7 @@ export const registerUser = async (userData) => {
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
         const error = new Error('Email already registered');
-        error.statusCode = 400;
+        error.statusCode = 409;
         throw error;
     }
 

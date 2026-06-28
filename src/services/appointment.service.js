@@ -42,8 +42,10 @@ export const getAppointments = async ({ userId, role, page, limit }) => {
         ? { patientId: userId }
         : { doctorId: userId };
 
-    const skip = page && limit ? (page - 1) * limit : undefined;
-    const take = limit || undefined;
+    const safePage  = page  && page  > 0 ? page  : null;
+    const safeLimit = limit && limit > 0 ? limit : null;
+    const skip = safePage && safeLimit ? (safePage - 1) * safeLimit : undefined;
+    const take = safeLimit || undefined;
 
     const [appointments, total] = await prisma.$transaction([
         prisma.appointment.findMany({

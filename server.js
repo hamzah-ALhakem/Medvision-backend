@@ -48,6 +48,13 @@ app.get('/', (req, res) => {
 // Error Handling
 app.use((err, req, res, next) => {
     logger.error(err.stack);
+
+    if (err.status || err.statusCode) {
+        return res.status(err.status || err.statusCode).json({
+            message: err.message || 'Request error'
+        });
+    }
+
     res.status(500).json({ message: 'Something went wrong!' });
 });
 
