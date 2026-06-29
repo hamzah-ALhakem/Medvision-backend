@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import helmet from 'helmet';
+import morgan from 'morgan';
 import logger from './src/utils/logger.js';
 
 // Import Routes
@@ -25,11 +26,13 @@ if (process.env.FRONTEND_URL) {
 
 // Security & Parsing Middleware
 app.use(helmet());
+app.use(morgan('dev'));
 app.use(cors({
     origin: allowedOrigins,
     credentials: true
 }));
 app.use(express.json({ limit: '1mb' }));
+app.use('/uploads', express.static('uploads'));
 
 // --- ROUTES ---
 app.use('/api/auth', authRoutes);

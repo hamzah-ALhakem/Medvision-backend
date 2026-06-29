@@ -8,7 +8,7 @@ export const getDoctors = async (req, res) => {
             where: { role: 'DOCTOR', accountStatus: 'ACTIVE' },
             select: {
                 id: true, firstName: true, lastName: true, specialty: true,
-                clinicAddress: true, gender: true, phone: true,
+                clinicAddress: true, gender: true, phone: true, image: true,
                 doctorSchedules: {
                     where: { isActive: true },
                     select: { dayOfWeek: true, startTime: true, endTime: true, isActive: true }
@@ -39,7 +39,7 @@ export const getProfile = async (req, res) => {
             select: {
                 id: true, firstName: true, lastName: true, email: true,
                 phone: true, role: true, gender: true, clinicAddress: true,
-                specialty: true, licenseNumber: true
+                specialty: true, licenseNumber: true, image: true
             }
         });
         if (!user) return res.status(404).json({ message: 'User not found' });
@@ -52,7 +52,7 @@ export const getProfile = async (req, res) => {
 // 3. Update Profile (General Info) — SECURITY: exclude password from response
 export const updateProfile = async (req, res) => {
     try {
-        const { firstName, lastName, phone, address, specialty } = req.body;
+        const { firstName, lastName, phone, address, specialty, image } = req.body;
         
         const updatedUser = await prisma.user.update({
             where: { id: req.user.id },
@@ -61,11 +61,12 @@ export const updateProfile = async (req, res) => {
                 lastName: lastName,
                 phone: phone,
                 clinicAddress: address,
-                specialty: specialty
+                specialty: specialty,
+                image: image
             },
             select: {
                 id: true, firstName: true, lastName: true, email: true,
-                phone: true, role: true, clinicAddress: true, specialty: true
+                phone: true, role: true, clinicAddress: true, specialty: true, image: true
             }
         });
 

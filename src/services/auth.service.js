@@ -75,6 +75,12 @@ export const loginUser = async (email, password) => {
         throw error;
     }
 
+    if (user.isEmailVerified === false) {
+        const error = new Error('Please check your inbox and verify your email before logging in.');
+        error.statusCode = 403;
+        throw error;
+    }
+
     const token = generateToken(user.id, user.role);
 
     return {
@@ -85,7 +91,8 @@ export const loginUser = async (email, password) => {
             lastName: user.lastName,
             email: user.email,
             role: user.role.toLowerCase(),
-            specialty: user.specialty
+            specialty: user.specialty,
+            image: user.image
         }
     };
 };

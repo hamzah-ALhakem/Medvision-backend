@@ -1,10 +1,22 @@
 import * as authService from '../services/auth.service.js';
 import { generateToken } from '../utils/jwt.js';
+import crypto from 'crypto';
+import { sendVerificationEmail, sendPasswordResetEmail } from '../utils/email.js';
+import prisma from '../config/prisma.js';
+import bcrypt from 'bcryptjs';
 
 // --- REGISTER ---
 export const register = async (req, res) => {
     try {
         const result = await authService.registerUser(req.body);
+
+        const verificationToken = crypto.randomBytes(32).toString('hex');
+        await prisma.user.update({
+            where: { id: result.user.id },
+            data: { verificationToken }
+        });
+
+        await sendVerificationEmail(result.user.email, verificationToken);
 
         if (result.role === 'DOCTOR') {
             return res.status(201).json({
@@ -32,5 +44,101 @@ export const login = async (req, res) => {
     } catch (error) {
         const statusCode = error.statusCode || 500;
         res.status(statusCode).json({ message: error.message || 'Server Error' });
+    }
+};
+
+// --- VERIFY EMAIL ---
+export const verifyEmail = async (req, res) => {
+    try {
+        const { token } = req.params;
+        const user = await prisma.user.findFirst({
+            where: { verificationToken: token }
+        });
+
+        if (!user) {
+            return res.status(400).json({ message: 'Invalid or expired verification token' });
+        }
+
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                isEmailVerified: true,
+                verificationToken: null
+            }
+        });
+
+        res.json({ message: 'Email verified successfully' });
+    } catch (error) {
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
+// --- FORGOT PASSWORD ---
+export const forgotPassword = async (req, res) => {
+    try {
+        const { email } = req.body;
+        
+        const user = await prisma.user.findUnique({ where: { email } });
+        console.log(`[Forgot Password] Request received for normalized email: "${email}"`);
+        console.log(`[Forgot Password] User found in DB: ${!!user}`);
+
+        if (user) {
+            const resetPasswordToken = crypto.randomBytes(32).toString('hex');
+            const resetPasswordExpires = new Date(Date.now() + 3600000); // 1 hour from now
+
+            try {
+                await prisma.user.update({
+                    where: { id: user.id },
+                    data: {
+                        resetPasswordToken,
+                        resetPasswordExpires
+                    }
+                });
+                
+                await sendPasswordResetEmail(user.email, resetPasswordToken);
+            } catch (innerErr) {
+                console.error("Failed to update user or send reset email:", innerErr);
+            }
+        }
+
+        res.json({ message: 'If that email is in our system, a password reset link has been sent.' });
+    } catch (error) {
+        console.error("Forgot password controller error:", error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
+// --- RESET PASSWORD ---
+export const resetPassword = async (req, res) => {
+    try {
+        const { token } = req.params;
+        const { newPassword } = req.body;
+
+        const user = await prisma.user.findFirst({
+            where: {
+                resetPasswordToken: token,
+                resetPasswordExpires: { gt: new Date() }
+            }
+        });
+
+        if (!user) {
+            return res.status(400).json({ message: 'Invalid or expired reset token' });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                password: hashedPassword,
+                resetPasswordToken: null,
+                resetPasswordExpires: null
+            }
+        });
+
+        res.json({ message: 'Password reset successfully' });
+    } catch (error) {
+        res.status(500).json({ message: 'Server Error' });
     }
 };
