@@ -19,7 +19,7 @@ export const registerValidation = [
         .isLength({ min: 2 }).withMessage('Full name must be at least 2 characters'),
     body('email')
         .isEmail().withMessage('Please provide a valid email address')
-        .normalizeEmail(),
+        .normalizeEmail({ gmail_remove_dots: false }),
     body('password')
         .isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
     body('role')
@@ -36,7 +36,7 @@ export const registerValidation = [
 export const loginValidation = [
     body('email')
         .isEmail().withMessage('Please provide a valid email address')
-        .normalizeEmail(),
+        .normalizeEmail({ gmail_remove_dots: false }),
     body('password')
         .notEmpty().withMessage('Password is required'),
 ];
@@ -44,7 +44,7 @@ export const loginValidation = [
 export const forgotPasswordValidation = [
     body('email')
         .isEmail().withMessage('Please provide a valid email address')
-        .normalizeEmail(),
+        .normalizeEmail({ gmail_remove_dots: false }),
 ];
 
 // --- Appointment Validations ---

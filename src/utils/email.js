@@ -31,7 +31,13 @@ export const sendVerificationEmail = async (to, token) => {
         `
     };
 
-    return await transporter.sendMail(mailOptions);
+    console.log('\n[Nodemailer] Attempting to send email to:', to);
+    try {
+        return await transporter.sendMail(mailOptions);
+    } catch (error) {
+        console.error('[Nodemailer Error]:', error);
+        throw error;
+    }
 };
 
 export const sendPasswordResetEmail = async (to, token) => {
@@ -55,5 +61,11 @@ export const sendPasswordResetEmail = async (to, token) => {
         `
     };
 
-    return await transporter.sendMail(mailOptions);
+    console.log('\n[Nodemailer] Attempting to send email to:', to);
+    try {
+        return await transporter.sendMail(mailOptions);
+    } catch (error) {
+        console.error('[Nodemailer Error]:', error);
+        throw error;
+    }
 };
