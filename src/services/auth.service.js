@@ -57,6 +57,17 @@ export const loginUser = async (email, password) => {
         throw error;
     }
 
+    // SECURITY (SEC-04): Check account lockout before anything else.
+    // If locked, return 429 with remaining minutes so the frontend can display it.
+    if (user.lockedUntil && user.lockedUntil > new Date()) {
+        const minutesLeft = Math.ceil((user.lockedUntil - new Date()) / 60000);
+        const error = new Error(
+            `Account temporarily locked due to too many failed attempts. Try again in ${minutesLeft} minute(s).`
+        );
+        error.statusCode = 429;
+        throw error;
+    }
+
     if (user.accountStatus === 'PENDING') {
         const error = new Error('Account is under review');
         error.statusCode = 403;
@@ -69,11 +80,34 @@ export const loginUser = async (email, password) => {
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
+
     if (!isMatch) {
+        // SECURITY (SEC-04): Increment failed attempts counter.
+        // Lock the account for 15 minutes after 5 consecutive failures.
+        const MAX_ATTEMPTS = 5;
+        const LOCKOUT_MINUTES = 15;
+        const newAttempts = (user.failedLoginAttempts || 0) + 1;
+
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                failedLoginAttempts: newAttempts,
+                lockedUntil: newAttempts >= MAX_ATTEMPTS
+                    ? new Date(Date.now() + LOCKOUT_MINUTES * 60 * 1000)
+                    : null,
+            },
+        });
+
         const error = new Error('Invalid credentials');
         error.statusCode = 400;
         throw error;
     }
+
+    // SECURITY (SEC-04): Reset counter on successful login.
+    await prisma.user.update({
+        where: { id: user.id },
+        data: { failedLoginAttempts: 0, lockedUntil: null },
+    });
 
     if (user.isEmailVerified === false) {
         const error = new Error('Please check your inbox and verify your email before logging in.');
@@ -81,7 +115,8 @@ export const loginUser = async (email, password) => {
         throw error;
     }
 
-    const token = generateToken(user.id, user.role);
+    // SECURITY (SEC-05): Pass tokenVersion so the token carries the current version.
+    const token = generateToken(user.id, user.role, user.tokenVersion);
 
     return {
         token,

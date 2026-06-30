@@ -19,6 +19,19 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// SECURITY (SEC-06): Force HTTPS in production.
+// Vercel terminates TLS and injects the x-forwarded-proto header.
+// Any HTTP request is redirected to HTTPS with a 301 (permanent redirect).
+if (process.env.NODE_ENV === 'production') {
+    app.use((req, res, next) => {
+        if (req.header('x-forwarded-proto') !== 'https') {
+            return res.redirect(301, `https://${req.header('host')}${req.url}`);
+        }
+        next();
+    });
+}
+
 const allowedOrigins = ['http://localhost:5173'];
 if (process.env.FRONTEND_URL) {
     allowedOrigins.push(process.env.FRONTEND_URL);

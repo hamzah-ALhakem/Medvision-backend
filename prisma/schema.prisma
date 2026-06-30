@@ -35,6 +35,15 @@ model User {
   resetPasswordToken   String?
   resetPasswordExpires DateTime?
 
+  // SECURITY (SEC-04): Track failed login attempts for per-account lockout.
+  // After 5 consecutive failures the account is locked for 15 minutes.
+  failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
+  lockedUntil         DateTime? @map("locked_until")
+
+  // SECURITY (SEC-05): Incremented on password change to invalidate all
+  // existing sessions. Tokens carry this version; mismatch = 403.
+  tokenVersion        Int       @default(0) @map("token_version")
+
   doctorSchedules       Schedule[]
   appointmentsAsDoctor  Appointment[] @relation("DoctorAppointments")
   appointmentsAsPatient Appointment[] @relation("PatientAppointments")

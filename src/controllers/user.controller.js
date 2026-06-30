@@ -94,7 +94,10 @@ export const changePassword = async (req, res) => {
 
         await prisma.user.update({
             where: { id: req.user.id },
-            data: { password: hashedPassword }
+            data: {
+                password: hashedPassword,
+                tokenVersion: { increment: 1 } // SECURITY (SEC-05): invalidate all existing sessions
+            }
         });
 
         res.json({ message: 'تم تغيير كلمة المرور بنجاح' });
