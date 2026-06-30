@@ -84,13 +84,14 @@ describe('registerUser', () => {
     expect(isHashed).toBe(true);
   });
 
-  it('TC-06 | duplicate email throws error with statusCode 400', async () => {
+  it('TC-06 | duplicate email throws error with statusCode 409 (BUG-002 FIXED)', async () => {
     await registerUser(validPatient);
 
     const error = await registerUser(validPatient).catch(e => e);
     expect(error).toBeInstanceOf(Error);
     expect(error.message).toBe('Email already registered');
-    expect(error.statusCode).toBe(400);
+    // BUG-002 FIXED: now correctly returns 409 Conflict
+    expect(error.statusCode).toBe(409);
   });
 
   it('TC-07 | fullName "Ahmed Ali" splits into firstName="Ahmed" lastName="Ali"', async () => {
@@ -145,6 +146,10 @@ describe('loginUser', () => {
 
   it('TC-14 | valid ACTIVE patient login returns token and user object', async () => {
     await registerUser(validPatient);
+    await prisma.user.update({
+      where: { email: validPatient.email },
+      data: { isEmailVerified: true },
+    });
     const result = await loginUser(validPatient.email, validPatient.password);
 
     expect(result).toHaveProperty('token');
@@ -154,12 +159,21 @@ describe('loginUser', () => {
 
   it('TC-15 | login returns role in lowercase', async () => {
     await registerUser(validPatient);
+    await prisma.user.update({
+      where: { email: validPatient.email },
+      data: { isEmailVerified: true },
+    });
     const result = await loginUser(validPatient.email, validPatient.password);
     expect(result.user.role).toBe('patient');
   });
 
   it('TC-16 | login response NEVER contains the password field', async () => {
     await registerUser(validPatient);
+    // Set email as verified so login works
+    await prisma.user.update({
+      where: { email: validPatient.email },
+      data: { isEmailVerified: true },
+    });
     const result = await loginUser(validPatient.email, validPatient.password);
 
     expect(result.user).not.toHaveProperty('password');
@@ -206,10 +220,14 @@ describe('loginUser', () => {
 
   it('TC-21 | token is a non-empty string (valid JWT format)', async () => {
     await registerUser(validPatient);
+    await prisma.user.update({
+      where: { email: validPatient.email },
+      data: { isEmailVerified: true },
+    });
     const result = await loginUser(validPatient.email, validPatient.password);
 
     expect(typeof result.token).toBe('string');
-    expect(result.token.split('.')).toHaveLength(3); // JWT = header.payload.signature
+    expect(result.token.split('.')).toHaveLength(3);
   });
 
 });

@@ -43,6 +43,7 @@ export const createPatient = async (overrides = {}) => {
       lastName: 'Patient',
       role: 'PATIENT',
       accountStatus: 'ACTIVE',
+      isEmailVerified: true,   // bypass email verification in tests
       ...overrides,
     },
   });
@@ -64,6 +65,7 @@ export const createDoctor = async (overrides = {}) => {
       lastName: 'Doctor',
       role: 'DOCTOR',
       accountStatus: 'ACTIVE',
+      isEmailVerified: true,   // bypass email verification in tests
       specialty: 'General Medicine',
       licenseNumber: `LIC-${uid()}`,
       ...overrides,
@@ -86,6 +88,7 @@ export const createPendingDoctor = async (overrides = {}) => {
       lastName: 'Doctor',
       role: 'DOCTOR',
       accountStatus: 'PENDING',
+      isEmailVerified: true,   // bypass email verification in tests
       specialty: 'Cardiology',
       licenseNumber: `LIC-P-${uid()}`,
       ...overrides,
@@ -108,6 +111,7 @@ export const createRejectedDoctor = async (overrides = {}) => {
       lastName: 'Doctor',
       role: 'DOCTOR',
       accountStatus: 'REJECTED',
+      isEmailVerified: true,   // bypass email verification in tests
       specialty: 'Neurology',
       licenseNumber: `LIC-R-${uid()}`,
       ...overrides,
@@ -130,6 +134,7 @@ export const createAdmin = async (overrides = {}) => {
       lastName: 'User',
       role: 'ADMIN',
       accountStatus: 'ACTIVE',
+      isEmailVerified: true,   // bypass email verification in tests
       ...overrides,
     },
   });

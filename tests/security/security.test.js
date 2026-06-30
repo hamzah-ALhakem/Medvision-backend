@@ -397,17 +397,16 @@ describe('Input Validation & Injection', () => {
     expect(res.status).not.toBe(500);
   });
 
-  it('SEC-24 | BUG-005: negative page number causes 500 crash (Prisma skip error)', async () => {
+  it('SEC-24 | BUG-005 FIXED: negative page number handled gracefully (no 500)', async () => {
     const { token } = await createPatient();
 
     const res = await request(app)
       .get('/api/appointments?page=-1&limit=5')
       .set('Authorization', `Bearer ${token}`);
 
-    // BUG-005: negative page makes skip = (-1-1)*5 = -10, Prisma throws unhandled error → 500
-    // When fixed, this should return 200 or 400 gracefully
-    // expect([200, 400]).toContain(res.status); ← what it should be after fix
-    expect(res.status).toBe(500); // ← current broken behavior — documents BUG-005
+    // BUG-005 FIXED: negative page no longer crashes the server
+    expect(res.status).not.toBe(500);
+    expect([200, 400]).toContain(res.status);
   });
 
   it('SEC-25 | non-integer doctorId in appointment booking → 400 (not 500)', async () => {
@@ -422,7 +421,7 @@ describe('Input Validation & Injection', () => {
     expect(res.status).not.toBe(500);
   });
 
-  it('SEC-26 | BUG-006: oversized JSON body returns 500 instead of 413', async () => {
+  it('SEC-26 | BUG-006 FIXED: oversized JSON body returns 413 (not 500)', async () => {
     const { token } = await createPatient();
 
     const oversizedContent = 'x'.repeat(1.1 * 1024 * 1024);
@@ -432,10 +431,9 @@ describe('Input Validation & Injection', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({ receiverId: 1, content: oversizedContent });
 
-    // BUG-006: Express catches PayloadTooLargeError but the global error handler
-    // in server.js returns 500 instead of forwarding the original 413 status.
-    // When fixed, this should return: expect(res.status).toBe(413)
-    expect(res.status).toBe(500); // ← current broken behavior — documents BUG-006
+    // BUG-006 FIXED: global error handler now forwards err.status correctly
+    expect(res.status).toBe(413);
+    expect(res.status).not.toBe(500);
   });
 
 });

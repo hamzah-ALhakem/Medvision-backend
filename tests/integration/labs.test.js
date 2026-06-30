@@ -126,7 +126,7 @@ describe('POST /api/labs', () => {
     expect(res.status).toBe(403);
   });
 
-  it('TC-09 | BUG-003: missing name → should return 400 but currently returns 500', async () => {
+  it('TC-09 | BUG-003 FIXED: missing name returns 400 (validation working)', async () => {
     const { token } = await createAdmin();
 
     const res = await request(app)
@@ -134,10 +134,8 @@ describe('POST /api/labs', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({ address: 'Some Address' }); // name is missing
 
-    // BUG-003: No validation on lab routes — Prisma throws raw 500
-    // When BUG-003 is fixed, this should be: expect(res.status).toBe(400)
-    // For now we document the actual (broken) behavior:
-    expect(res.status).toBe(500); // ← BUG-003: should be 400
+    // BUG-003 is now FIXED — validation middleware returns 400
+    expect(res.status).toBe(400); // ← correctly validates now
   });
 
   it('TC-10 | no token → 401', async () => {

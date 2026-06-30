@@ -247,7 +247,7 @@ describe('GET /api/admin/stats', () => {
     expect(res.body.pending).toBe(1);
   });
 
-  it('TC-17 | BUG-001: labs count is hardcoded 0 regardless of real lab count', async () => {
+  it('TC-17 | BUG-001 FIXED: stats.labs returns real lab count', async () => {
     const { token } = await createAdmin();
     // Create real labs in DB
     await createLab();
@@ -257,9 +257,8 @@ describe('GET /api/admin/stats', () => {
       .get('/api/admin/stats')
       .set('Authorization', `Bearer ${token}`);
 
-    // This test DOCUMENTS the bug — labs should be 2, but returns 0
-    // When BUG-001 is fixed, change this to: expect(res.body.labs).toBe(2)
-    expect(res.body.labs).toBe(0); // ← BUG-001: hardcoded, not queried from DB
+    // BUG-001 is now FIXED — labs reflects real DB count
+    expect(res.body.labs).toBe(2); // ← real count, not hardcoded 0
   });
 
   it('TC-18 | non-admin → 403', async () => {

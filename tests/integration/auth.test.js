@@ -58,7 +58,7 @@ describe('POST /api/auth/register', () => {
     expect(res.body).not.toHaveProperty('token');
   });
 
-  it('TC-04 | duplicate email → 400', async () => {
+  it('TC-04 | duplicate email → 409 (BUG-002 FIXED)', async () => {
     await request(app).post('/api/auth/register').send({
       fullName: 'Ahmed Ali', email: 'dup@test.com', password: 'SecurePass123',
     });
@@ -67,7 +67,8 @@ describe('POST /api/auth/register', () => {
       fullName: 'Ahmed Ali', email: 'dup@test.com', password: 'SecurePass123',
     });
 
-    expect(res.status).toBe(400);
+    // BUG-002 is now FIXED — returns 409 Conflict
+    expect(res.status).toBe(409);
     expect(res.body).toHaveProperty('message');
   });
 

@@ -35,6 +35,8 @@ export default {
   moduleNameMapper: {
     // Intercept pusher config import and replace with our mock
     '^(\\.\\./|\\./)*(src/)?config/pusher\\.js$': '<rootDir>/src/config/__mocks__/pusher.js',
+    // Intercept email utility — prevent real emails during tests
+    '^(\\.\\./|\\./)*(src/)?utils/email\\.js$': '<rootDir>/src/utils/__mocks__/email.js',
   },
 
   // Force Jest to exit after all tests complete (prevents hanging open handles from server.listen)
