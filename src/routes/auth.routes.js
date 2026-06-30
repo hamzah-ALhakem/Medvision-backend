@@ -6,9 +6,11 @@ import rateLimit from 'express-rate-limit';
 const router = express.Router();
 
 // Rate limiter: 10 attempts per 15 minutes per IP
+// Disabled in test environment to allow repeated requests without hitting 429
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 10,
+    max: process.env.NODE_ENV === 'test' ? 0 : 10, // 0 = unlimited in test
+    skip: () => process.env.NODE_ENV === 'test',
     message: { message: 'Too many attempts. Please try again later.' },
     standardHeaders: true,
     legacyHeaders: false,
