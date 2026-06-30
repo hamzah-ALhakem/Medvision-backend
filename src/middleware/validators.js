@@ -41,6 +41,12 @@ export const loginValidation = [
         .notEmpty().withMessage('Password is required'),
 ];
 
+export const forgotPasswordValidation = [
+    body('email')
+        .isEmail().withMessage('Please provide a valid email address')
+        .normalizeEmail(),
+];
+
 // --- Appointment Validations ---
 export const createAppointmentValidation = [
     body('doctorId')

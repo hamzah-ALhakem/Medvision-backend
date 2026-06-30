@@ -55,11 +55,12 @@ export const deleteUser = async (req, res) => {
 // 6. Stats
 export const getStats = async (req, res) => {
     try {
-        const [doctors, patients, pending] = await prisma.$transaction([
+        const [doctors, patients, pending, labs] = await prisma.$transaction([
             prisma.user.count({ where: { role: 'DOCTOR', accountStatus: 'ACTIVE' } }),
             prisma.user.count({ where: { role: 'PATIENT' } }),
-            prisma.user.count({ where: { role: 'DOCTOR', accountStatus: 'PENDING' } })
+            prisma.user.count({ where: { role: 'DOCTOR', accountStatus: 'PENDING' } }),
+            prisma.lab.count()
         ]);
-        res.json({ doctors, patients, pending, labs: 0 });
+        res.json({ doctors, patients, pending, labs });
     } catch (error) { res.status(500).json({ message: 'Error' }); }
 };

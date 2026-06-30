@@ -1,6 +1,6 @@
 import express from 'express';
-import { register, login } from '../controllers/auth.controller.js';
-import { registerValidation, loginValidation, validate } from '../middleware/validators.js';
+import { register, login, verifyEmail, forgotPassword, resetPassword } from '../controllers/auth.controller.js';
+import { registerValidation, loginValidation, forgotPasswordValidation, validate } from '../middleware/validators.js';
 import rateLimit from 'express-rate-limit';
 
 const router = express.Router();
@@ -18,5 +18,9 @@ const authLimiter = rateLimit({
 
 router.post('/register', authLimiter, registerValidation, validate, register);
 router.post('/login', authLimiter, loginValidation, validate, login);
+
+router.get('/verify-email/:token', verifyEmail);
+router.post('/forgot-password', authLimiter, forgotPasswordValidation, validate, forgotPassword);
+router.post('/reset-password/:token', authLimiter, resetPassword);
 
 export default router;

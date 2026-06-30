@@ -28,6 +28,12 @@ model User {
   clinicAddress String?  @map("clinic_address")
   licenseNumber String?  @map("license_number")
   bio           String?
+  image         String?
+
+  isEmailVerified      Boolean   @default(false)
+  verificationToken    String?
+  resetPasswordToken   String?
+  resetPasswordExpires DateTime?
 
   doctorSchedules       Schedule[]
   appointmentsAsDoctor  Appointment[] @relation("DoctorAppointments")
