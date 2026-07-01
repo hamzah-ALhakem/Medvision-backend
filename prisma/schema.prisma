@@ -19,12 +19,15 @@ model User {
   
   accountStatus AccountStatus @default(ACTIVE) @map("account_status")
 
-  firstName     String   @map("first_name")
-  lastName      String   @map("last_name")
+  firstNameEn   String   @map("first_name_en")
+  firstNameAr   String   @map("first_name_ar")
+  lastNameEn    String   @map("last_name_en")
+  lastNameAr    String   @map("last_name_ar")
   phone         String?
   gender        String?
   city          String?
-  specialty     String?
+  specialtyEn   String?  @map("specialty_en")
+  specialtyAr   String?  @map("specialty_ar")
   clinicAddress String?  @map("clinic_address")
   licenseNumber String?  @map("license_number")
   bio           String?
@@ -136,7 +139,8 @@ model Notification {
 // 6. Medical Labs
 model Lab {
   id        Int      @id @default(autoincrement())
-  name      String
+  nameEn    String   @map("name_en")
+  nameAr    String   @map("name_ar")
   address   String
   phone     String?
   rating    Float    @default(0.0)
@@ -149,7 +153,8 @@ model Lab {
 
 model LabService {
   id      Int    @id @default(autoincrement())
-  name    String
+  nameEn  String @map("name_en")
+  nameAr  String @map("name_ar")
   price   Float
   
   labId   Int    @map("lab_id")

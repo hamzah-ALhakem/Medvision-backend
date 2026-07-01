@@ -13,17 +13,19 @@ export const getAllLabs = async (req, res, next) => {
 
 export const createLab = async (req, res, next) => {
     try {
-        const { name, address, phone, rating, image, services } = req.body;
+        const { nameEn, nameAr, address, phone, rating, image, services } = req.body;
         const newLab = await prisma.lab.create({
             data: {
-                name,
+                nameEn,
+                nameAr,
                 address,
                 phone,
                 rating: parseFloat(rating) || 0.0,
                 image,
                 services: {
                     create: services?.map(s => ({
-                        name: s.name,
+                        nameEn: s.nameEn,
+                        nameAr: s.nameAr,
                         price: parseFloat(s.price)
                     })) || []
                 }
@@ -39,12 +41,13 @@ export const createLab = async (req, res, next) => {
 export const updateLab = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const { name, address, phone, rating, image, services } = req.body;
+        const { nameEn, nameAr, address, phone, rating, image, services } = req.body;
         
         const updatedLab = await prisma.lab.update({
             where: { id: parseInt(id) },
             data: {
-                name,
+                nameEn,
+                nameAr,
                 address,
                 phone,
                 rating: rating !== undefined ? parseFloat(rating) : undefined,
@@ -59,7 +62,8 @@ export const updateLab = async (req, res, next) => {
             if (services.length > 0) {
                 await prisma.labService.createMany({
                     data: services.map(s => ({
-                        name: s.name,
+                        nameEn: s.nameEn,
+                        nameAr: s.nameAr,
                         price: parseFloat(s.price),
                         labId: parseInt(id)
                     }))

@@ -29,7 +29,7 @@ export const createAppointment = async ({ patientId, doctorId, date, time, reaso
             status: 'PENDING'
         },
         include: {
-            patient: { select: { firstName: true, lastName: true } }
+            patient: { select: { firstNameEn: true, firstNameAr: true, lastNameEn: true, lastNameAr: true } }
         }
     });
 
@@ -52,10 +52,10 @@ export const getAppointments = async ({ userId, role, page, limit }) => {
             where: whereCondition,
             include: {
                 doctor: role === 'PATIENT' ? {
-                    select: { id: true, firstName: true, lastName: true, specialty: true, clinicAddress: true, phone: true }
+                    select: { id: true, firstNameEn: true, firstNameAr: true, lastNameEn: true, lastNameAr: true, specialtyEn: true, specialtyAr: true, clinicAddress: true, phone: true }
                 } : false,
                 patient: role === 'DOCTOR' ? {
-                    select: { id: true, firstName: true, lastName: true, phone: true, gender: true }
+                    select: { id: true, firstNameEn: true, firstNameAr: true, lastNameEn: true, lastNameAr: true, phone: true, gender: true }
                 } : false
             },
             orderBy: { date: 'desc' },
@@ -75,9 +75,12 @@ export const getAppointments = async ({ userId, role, page, limit }) => {
             reason: appt.reason,
             doctor_id: appt.doctorId,
             patient_id: appt.patientId,
-            first_name: otherParty?.firstName,
-            last_name: otherParty?.lastName,
-            specialty: otherParty?.specialty,
+            first_name_en: otherParty?.firstNameEn,
+            first_name_ar: otherParty?.firstNameAr,
+            last_name_en: otherParty?.lastNameEn,
+            last_name_ar: otherParty?.lastNameAr,
+            specialty_en: otherParty?.specialtyEn,
+            specialty_ar: otherParty?.specialtyAr,
             clinic_address: otherParty?.clinicAddress,
             phone: otherParty?.phone,
             gender: otherParty?.gender
@@ -113,8 +116,8 @@ export const updateStatus = async ({ appointmentId, doctorId, status }) => {
         where: { id: appointmentId },
         data: { status: prismaStatus },
         include: {
-            doctor: { select: { firstName: true, lastName: true } },
-            patient: { select: { firstName: true, lastName: true } }
+            doctor: { select: { firstNameEn: true, firstNameAr: true, lastNameEn: true, lastNameAr: true } },
+            patient: { select: { firstNameEn: true, firstNameAr: true, lastNameEn: true, lastNameAr: true } }
         }
     });
 

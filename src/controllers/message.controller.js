@@ -23,7 +23,8 @@ export const sendMessage = async (req, res) => {
 
         // Create notification
         try {
-            const senderName = await messageService.getSenderName(senderId);
+            const sender = await messageService.getSenderName(senderId);
+            const senderName = sender ? `${sender.firstNameAr} ${sender.lastNameAr}` : 'Unknown';
             const notification = await notificationService.createNotification({
                 userId: receiverId,
                 type: 'message',

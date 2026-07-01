@@ -7,7 +7,7 @@ export const getDoctors = async (req, res) => {
         const doctors = await prisma.user.findMany({
             where: { role: 'DOCTOR', accountStatus: 'ACTIVE' },
             select: {
-                id: true, firstName: true, lastName: true, specialty: true,
+                id: true, firstNameEn: true, firstNameAr: true, lastNameEn: true, lastNameAr: true, specialtyEn: true, specialtyAr: true,
                 clinicAddress: true, gender: true, phone: true, image: true,
                 doctorSchedules: {
                     where: { isActive: true },
@@ -37,9 +37,9 @@ export const getProfile = async (req, res) => {
         const user = await prisma.user.findUnique({
             where: { id: req.user.id },
             select: {
-                id: true, firstName: true, lastName: true, email: true,
+                id: true, firstNameEn: true, firstNameAr: true, lastNameEn: true, lastNameAr: true, email: true,
                 phone: true, role: true, gender: true, clinicAddress: true,
-                specialty: true, licenseNumber: true, image: true
+                specialtyEn: true, specialtyAr: true, licenseNumber: true, image: true
             }
         });
         if (!user) return res.status(404).json({ message: 'User not found' });
@@ -52,21 +52,24 @@ export const getProfile = async (req, res) => {
 // 3. Update Profile (General Info) — SECURITY: exclude password from response
 export const updateProfile = async (req, res) => {
     try {
-        const { firstName, lastName, phone, address, specialty, image } = req.body;
+        const { firstNameEn, firstNameAr, lastNameEn, lastNameAr, phone, address, specialtyEn, specialtyAr, image } = req.body;
         
         const updatedUser = await prisma.user.update({
             where: { id: req.user.id },
             data: {
-                firstName: firstName,
-                lastName: lastName,
+                firstNameEn,
+                firstNameAr,
+                lastNameEn,
+                lastNameAr,
                 phone: phone,
                 clinicAddress: address,
-                specialty: specialty,
+                specialtyEn,
+                specialtyAr,
                 image: image
             },
             select: {
-                id: true, firstName: true, lastName: true, email: true,
-                phone: true, role: true, clinicAddress: true, specialty: true, image: true
+                id: true, firstNameEn: true, firstNameAr: true, lastNameEn: true, lastNameAr: true, email: true,
+                phone: true, role: true, clinicAddress: true, specialtyEn: true, specialtyAr: true, image: true
             }
         });
 

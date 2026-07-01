@@ -18,8 +18,10 @@ export const registerUser = async (userData) => {
     const hashedPassword = await bcrypt.hash(password, salt);
 
     const nameParts = fullName ? fullName.split(' ') : ['User', ''];
-    const firstName = nameParts[0];
-    const lastName = nameParts.slice(1).join(' ') || '';
+    const firstNameEn = nameParts[0];
+    const lastNameEn = nameParts.slice(1).join(' ') || '';
+    const firstNameAr = firstNameEn;
+    const lastNameAr = lastNameEn;
 
     const requestedRole = role ? role.toUpperCase() : 'PATIENT';
     const userRole = ALLOWED_ROLES.includes(requestedRole) ? requestedRole : 'PATIENT';
@@ -27,13 +29,14 @@ export const registerUser = async (userData) => {
 
     const newUser = await prisma.user.create({
         data: {
-            firstName, lastName, email,
+            firstNameEn, firstNameAr, lastNameEn, lastNameAr, email,
             password: hashedPassword,
             phone, gender,
             role: userRole,
             accountStatus: status,
             licenseNumber: userRole === 'DOCTOR' ? licenseNumber : null,
-            specialty: userRole === 'DOCTOR' ? specialty : null,
+            specialtyEn: userRole === 'DOCTOR' ? specialty : null,
+            specialtyAr: userRole === 'DOCTOR' ? specialty : null,
             clinicAddress: userRole === 'DOCTOR' ? clinicAddress : null,
             doctorSchedules: (schedule && schedule.length > 0) ? {
                 create: schedule.map(s => ({
@@ -122,11 +125,14 @@ export const loginUser = async (email, password) => {
         token,
         user: {
             id: user.id,
-            firstName: user.firstName,
-            lastName: user.lastName,
+            firstNameEn: user.firstNameEn,
+            firstNameAr: user.firstNameAr,
+            lastNameEn: user.lastNameEn,
+            lastNameAr: user.lastNameAr,
             email: user.email,
             role: user.role.toLowerCase(),
-            specialty: user.specialty,
+            specialtyEn: user.specialtyEn,
+            specialtyAr: user.specialtyAr,
             image: user.image
         }
     };

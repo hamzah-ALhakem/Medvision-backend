@@ -63,7 +63,7 @@ export const getContacts = async (myId) => {
     // Fetch user details in one query
     const contacts = await prisma.user.findMany({
         where: { id: { in: Array.from(contactIds) } },
-        select: { id: true, firstName: true, lastName: true, role: true, specialty: true }
+        select: { id: true, firstNameEn: true, firstNameAr: true, lastNameEn: true, lastNameAr: true, role: true, specialtyEn: true, specialtyAr: true }
     });
 
     return contacts;
@@ -73,7 +73,7 @@ export const getContacts = async (myId) => {
 export const getSenderName = async (senderId) => {
     const sender = await prisma.user.findUnique({
         where: { id: senderId },
-        select: { firstName: true, lastName: true }
+        select: { firstNameEn: true, firstNameAr: true, lastNameEn: true, lastNameAr: true }
     });
-    return sender ? `${sender.firstName} ${sender.lastName}` : 'Unknown';
+    return sender || null;
 };

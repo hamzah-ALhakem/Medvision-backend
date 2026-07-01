@@ -13,7 +13,7 @@ export const createAppointment = async (req, res) => {
             patientId, doctorId, date, time, reason
         });
 
-        const patientName = `${newAppointment.patient.firstName} ${newAppointment.patient.lastName}`;
+        const patientName = `${newAppointment.patient.firstNameAr} ${newAppointment.patient.lastNameAr}`;
 
         const notification = await notificationService.createNotification({
             userId: doctorId,
@@ -66,8 +66,8 @@ export const updateAppointmentStatus = async (req, res) => {
 
         // Notify patient
         let msg = '';
-        if (status === 'confirmed') msg = `\u2705 \u062a\u0645 \u062a\u0623\u0643\u064a\u062f \u0645\u0648\u0639\u062f\u0643 \u0645\u0639 \u062f. ${updatedAppt.doctor.firstName} ${updatedAppt.doctor.lastName}`;
-        if (status === 'cancelled') msg = `\u274c \u062a\u0645 \u0625\u0644\u063a\u0627\u0621 \u0645\u0648\u0639\u062f\u0643 \u0645\u0639 \u062f. ${updatedAppt.doctor.firstName} ${updatedAppt.doctor.lastName}`;
+        if (status === 'confirmed') msg = `\u2705 \u062a\u0645 \u062a\u0623\u0643\u064a\u062f \u0645\u0648\u0639\u062f\u0643 \u0645\u0639 \u062f. ${updatedAppt.doctor.firstNameAr} ${updatedAppt.doctor.lastNameAr}`;
+        if (status === 'cancelled') msg = `\u274c \u062a\u0645 \u0625\u0644\u063a\u0627\u0621 \u0645\u0648\u0639\u062f\u0643 \u0645\u0639 \u062f. ${updatedAppt.doctor.firstNameAr} ${updatedAppt.doctor.lastNameAr}`;
 
         const notification = await notificationService.createNotification({
             userId: updatedAppt.patientId,

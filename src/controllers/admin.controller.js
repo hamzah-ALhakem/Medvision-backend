@@ -5,7 +5,7 @@ export const getPendingDoctors = async (req, res) => {
     try {
         const doctors = await prisma.user.findMany({
             where: { role: 'DOCTOR', accountStatus: 'PENDING' },
-            select: { id: true, firstName: true, lastName: true, email: true, phone: true, specialty: true, licenseNumber: true, createdAt: true }
+            select: { id: true, firstNameEn: true, firstNameAr: true, lastNameEn: true, lastNameAr: true, email: true, phone: true, specialtyEn: true, specialtyAr: true, licenseNumber: true, createdAt: true }
         });
         res.json(doctors);
     } catch (error) { res.status(500).json({ message: 'Server Error' }); }
@@ -16,7 +16,7 @@ export const getActiveDoctors = async (req, res) => {
     try {
         const doctors = await prisma.user.findMany({
             where: { role: 'DOCTOR', accountStatus: 'ACTIVE' },
-            select: { id: true, firstName: true, lastName: true, email: true, phone: true, specialty: true, licenseNumber: true, createdAt: true }
+            select: { id: true, firstNameEn: true, firstNameAr: true, lastNameEn: true, lastNameAr: true, email: true, phone: true, specialtyEn: true, specialtyAr: true, licenseNumber: true, createdAt: true }
         });
         res.json(doctors);
     } catch (error) { res.status(500).json({ message: 'Server Error' }); }
